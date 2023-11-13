@@ -1,0 +1,39 @@
+service: bokningsapi
+useDotenv: true
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  profile: ${env:AWS_PROFILE}
+  region: eu-north-1
+  iam:
+    role: ${env:AWS_IAM_ROLE}
+
+plugins:
+  - serverless-webpack
+
+package:
+  individually: true
+
+functions:
+  test:
+    handler: functions/test/index.handler
+    events:
+      - httpApi:
+          path: '/getWords'
+          method: GET
+
+resources:
+  Resources:
+    teamDb:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: booking-db # Database table name
+        AttributeDefinitions:
+          - AttributeName: id # database item id
+            AttributeType: S # String
+        KeySchema:
+          - AttributeName: id # database key id
+            KeyType: HASH
+        BillingMode: PAY_PER_REQUEST
