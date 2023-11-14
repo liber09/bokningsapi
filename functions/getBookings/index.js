@@ -23,6 +23,8 @@ exports.handler = async (event, context) => {
         }
         rooms.put(booking);
       });    
+    }else{
+      return sendResponse(204, { message: 'Inga rum hittades.' });
     }
     if (rooms.length > 0){
       return sendResponse(200, { success: true, event: rooms });
