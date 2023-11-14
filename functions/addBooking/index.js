@@ -5,7 +5,8 @@ const ses = new AWS.SES();
 
 exports.handler = async (event, context) => {
   const newBooking = JSON.parse(event.body);
-  const { id, firstname, email, startDate, endDate, visitors, roomTypes } = newBooking;
+  const { id, firstname, email, startDate, endDate, visitors, roomTypes } =
+    newBooking;
 
   try {
     // Validera inmatningsparametrar (lägg till valideringslogik här)
@@ -18,13 +19,13 @@ exports.handler = async (event, context) => {
 
     // Skicka bekräftelsemail
     const confirmationEmail = generateConfirmationEmail({
-        bookingNumber,
-        numberOfGuests: visitors.length,
-        roomTypes,
-        totalAmount,
-        checkInDate: startDate,
-        checkOutDate: endDate,
-        guestName: firstname,
+      bookingNumber,
+      numberOfGuests: visitors.length,
+      roomTypes,
+      totalAmount,
+      checkInDate: startDate,
+      checkOutDate: endDate,
+      guestName: firstname,
     });
 
     // Spara bokningsdetaljer i DynamoDB
@@ -56,27 +57,26 @@ exports.handler = async (event, context) => {
 };
 
 function calculateTotalAmount(roomTypes, startDate, endDate) {
-    // Implementera logik för att beräkna totalbeloppet baserat på rumstyper och nätter
+  // Implementera logik för att beräkna totalbeloppet baserat på rumstyper och nätter
 }
 
 function generateBookingNumber() {
-    // Implementera logik för att generera ett bokningsnummer
-
+  // Implementera logik för att generera ett bokningsnummer
 }
 
 function generateConfirmationEmail({
-    bookingNumber,
-    numberOfGuests,
-    roomTypes,
-    totalAmount,
-    checkInDate,
-    checkOutDate,
-    guestName,
+  bookingNumber,
+  numberOfGuests,
+  roomTypes,
+  totalAmount,
+  checkInDate,
+  checkOutDate,
+  guestName,
 }) {
-    // Implementera logik för att generera innehållet i ett bekräftelsemail
+  // Implementera logik för att generera innehållet i ett bekräftelsemail
 
-    // Exempel på innehåll i bekräftelsemailet (anpassa efter behov)
-    const emailContent = `
+  // Exempel på innehåll i bekräftelsemailet (anpassa efter behov)
+  const emailContent = `
         Thank you, ${guestName}, for your booking!
 
         Bokningsnummer: ${bookingNumber}
@@ -89,32 +89,31 @@ function generateConfirmationEmail({
         We are looking forward to your visit!
     `;
 
-    return emailContent;
+  return emailContent;
 }
 
 async function sendEmail(toEmail, subject, body) {
-    const params = {
-        Destination: {
-            ToAddresses: [toEmail],
+  const params = {
+    Destination: {
+      ToAddresses: [toEmail],
+    },
+    Message: {
+      Body: {
+        Text: {
+          Data: body,
         },
-        Message: {
-            Body: {
-                Text: {
-                    Data: body,
-                },
-            },
-            Subject: {
-                Data: subject,
-            },
-        },
-        Source: 'din-email@example.com', // Uppdatera med din verifierade e-postadress i SES
-    };
+      },
+      Subject: {
+        Data: subject,
+      },
+    },
+    Source: 'din-email@example.com', // Uppdatera med din verifierade e-postadress i SES
+  };
 
-    try {
-        await ses.sendEmail(params).promise();
-    } catch (error) {
-        console.error('Fel vid sändning av e-post:', error);
-        throw error;
-    }
+  try {
+    await ses.sendEmail(params).promise();
+  } catch (error) {
+    console.error('Fel vid sändning av e-post:', error);
+    throw error;
+  }
 }
-
