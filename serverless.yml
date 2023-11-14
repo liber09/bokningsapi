@@ -41,6 +41,12 @@ functions:
       - httpApi:
           path: '/get'
           method: GET
+  addRooms:
+    handler: functions/addRooms/index.handler
+    events:
+      - httpApi:
+          path: '/addRooms'
+          method: POST
 
 resources:
   Resources:
@@ -53,5 +59,16 @@ resources:
             AttributeType: S # String
         KeySchema:
           - AttributeName: id # database key id
+            KeyType: HASH
+        BillingMode: PAY_PER_REQUEST
+    roomDb:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: room-db
+        AttributeDefinitions:
+          - AttributeName: roomId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: roomId
             KeyType: HASH
         BillingMode: PAY_PER_REQUEST
