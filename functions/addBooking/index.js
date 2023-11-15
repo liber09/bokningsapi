@@ -183,9 +183,9 @@ async function bookRooms(roomTypesToBook, availableRooms) {
 function validateParameters(firstName, eMail, startDate, endDate, visitors) {
   let validationError = false;
   let errorMessage = '';
-  //var validEmailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*$/;
+  var validEmailRegex = /^[A-Za-z0-9_!#$%&'*+\/=?`{|}~^.-]+@[A-Za-z0-9.-]+$/gm;
   // const today = moment(new Date()).format('YYYY-MM-DD');
-  //const today = moment().unix();
+  const today = moment(new Date(),'YYYY-MM-DD').unix();
   if (firstName.trim() === ''){
     validationError = true;
     errorMessage += ' Firstname is missing, ';
@@ -193,8 +193,8 @@ function validateParameters(firstName, eMail, startDate, endDate, visitors) {
     //  message: 'firstname is missing',
     //});
   }
-  /*
-  if (!email.match(validEmailRegex)) {
+  
+  if (!eMail.match(validEmailRegex)) {
     validationError = true;
     errorMessage += ' eMail is not valid, ';
     //return sendResponse(400, {
@@ -202,9 +202,9 @@ function validateParameters(firstName, eMail, startDate, endDate, visitors) {
     //  message: 'eMail is not valid.',
     //});
   }
-  */
-  /*
-  if (moment(startDate, 'YYYY-MM-DD').unix() < moment(today, 'YYYY-MM-DD').unix()) {
+  
+  
+  if (moment(new Date(),'YYYY-MM-DD').unix() >= moment(startDate, 'YYYY-MM-DD').unix()) {
     validationError = true;
     errorMessage += ' Start date needs to be today or later, ';
     //return sendResponse(400, {
@@ -233,7 +233,7 @@ function validateParameters(firstName, eMail, startDate, endDate, visitors) {
     //  message: 'There needs to be at least one visitor',
     //});
   }
-  */
+  
   return errorMessage;
 }
 
