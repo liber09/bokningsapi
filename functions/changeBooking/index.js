@@ -18,6 +18,52 @@ async function getBooking(bookingId) {
   }
 }
 
+exports.handler = async (event, context) => {
+  const updateAttributes = JSON.parse(event.body);
+  const bookingId = updateAttributes.id;
+
+  const updateExpression =
+    'SET ' +
+    Object.keys(updateAttributes).map(
+      (attributeName) => `#${attributeName} = :${attributeName}`
+    );
+
+  const expressionAttributeValues = Object.keys(updateAttributes).reduce(
+    (values, attributeName) => {
+      values[`:${attributeName}`] = updateAttributes[attributeName];
+      return values;
+    },
+    {}
+  );
+
+  const booking = await getBooking(bookingId);
+
+  if (!booking) {
+    return sendResponse(404, { message: 'Booking not found' });
+  }
+
+  try {
+    const result = await db
+      .update({
+        TableName: 'booking-db',
+        Key: { id: bookingId },
+        UpdateExpression: updateExpression,
+        ExpressionAttributeValues: 'id = :bookingId',
+        ExpressionAttributeNames: expressionAttributeValues,
+      })
+      .promise();
+    // await updateBooking(bookingId, message);
+    return sendResponse(200, {
+      success: true,
+      message: 'Booking updated successfully',
+      updatedBooking: result.Attributes,
+    });
+  } catch (error) {
+    return sendResponse(500, { message: 'Could not update' });
+  }
+};
+
+/*
 async function updateBooking(bookingId, message) {
   try {
     await db
@@ -37,23 +83,4 @@ async function updateBooking(bookingId, message) {
     console.error('Error updating booking:', error);
   }
 }
-
-exports.handler = async (event, context) => {
-  const { id, message } = JSON.parse(event.body);
-
-  const booking = await getBooking(id);
-
-  if (!booking) {
-    return sendResponse(404, { message: 'Booking not found' });
-  }
-
-  try {
-    await updateBooking(id, message);
-    return sendResponse(200, {
-      success: true,
-      message: 'Booking updated successfully',
-    });
-  } catch (error) {
-    return sendResponse(500, { message: 'Could not update' });
-  }
-};
+*/
