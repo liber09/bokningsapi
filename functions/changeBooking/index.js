@@ -19,18 +19,26 @@ async function getBooking(bookingId) {
 }
 
 exports.handler = async (event, context) => {
+  const { bookingId } = event.pathParameters;
   const updateAttributes = JSON.parse(event.body);
-  const bookingId = updateAttributes.id;
 
   const updateExpression =
-    'SET ' +
-    Object.keys(updateAttributes).map(
-      (attributeName) => `#${attributeName} = :${attributeName}`
-    );
+    'set ' +
+    Object.keys(updateAttributes)
+      .map((attributeName) => `#${attributeName} = :${attributeName}`)
+      .join(', ');
 
   const expressionAttributeValues = Object.keys(updateAttributes).reduce(
     (values, attributeName) => {
       values[`:${attributeName}`] = updateAttributes[attributeName];
+      return values;
+    },
+    {}
+  );
+
+  const expressionAttributeNames = Object.keys(updateAttributes).reduce(
+    (values, attributeName) => {
+      values[`#${attributeName}`] = `${attributeName}`;
       return values;
     },
     {}
@@ -48,8 +56,8 @@ exports.handler = async (event, context) => {
         TableName: 'booking-db',
         Key: { id: bookingId },
         UpdateExpression: updateExpression,
-        ExpressionAttributeValues: 'id = :bookingId',
-        ExpressionAttributeNames: expressionAttributeValues,
+        ExpressionAttributeValues: expressionAttributeValues,
+        ExpressionAttributeNames: expressionAttributeNames,
       })
       .promise();
     // await updateBooking(bookingId, message);
@@ -59,11 +67,18 @@ exports.handler = async (event, context) => {
       updatedBooking: result.Attributes,
     });
   } catch (error) {
-    return sendResponse(500, { message: 'Could not update' });
+    return sendResponse(500, {
+      message: 'Could not update',
+      updateExpression: updateExpression,
+      expressionAttributeValues: expressionAttributeValues,
+      error: error,
+    });
   }
 };
 
 /*
+ExpressionAttributeNames: {'#message': 'message'},
+{ '#message': 'message' }
 async function updateBooking(bookingId, message) {
   try {
     await db
