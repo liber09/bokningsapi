@@ -27,7 +27,7 @@ functions:
     handler: functions/changeBooking/index.handler
     events:
       - httpApi:
-          path: '/change'
+          path: '/change/{bookingId}'
           method: PATCH
   deleteBooking:
     handler: functions/deleteBooking/index.handler
