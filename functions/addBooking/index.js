@@ -13,6 +13,7 @@ exports.handler = async (event, context) => {
   newBooking.bookingNumber = generateBookingNumber();
   const { id, firstName, eMail, startDate, endDate, visitors, bookingNumber } =
     newBooking;
+
   try {
     // Validera inmatningsparametrar
     const error = validateParameters(
@@ -31,7 +32,6 @@ exports.handler = async (event, context) => {
 
     //hämta hur många rum vi ska boka
     const roomTypesToBook = getRoomTypes(visitors);
-    console.log('roomstypestobook:', roomTypesToBook);
 
     //Boka rummen
     const bookedRooms = await bookRooms(
@@ -39,7 +39,8 @@ exports.handler = async (event, context) => {
       availableRooms,
       newBooking
     );
-    console.log('booked rooms:', bookedRooms);
+
+    const bookedRoomIds = bookedRooms.map((room) => room.roomId);
 
     // Beräkna totalbeloppet baserat på rumstyper och nätter
     const totalAmount = calculateTotalAmount(
@@ -47,7 +48,6 @@ exports.handler = async (event, context) => {
       startDate,
       endDate
     );
-    console.log('total amount:', totalAmount);
 
     // Generera ett bokningsnummer (implementera din egen logik)
     //const bookingNumber = generateBookingNumber();
@@ -78,6 +78,7 @@ exports.handler = async (event, context) => {
           endDate: endDate,
           visitors: visitors,
           bookingNumber: bookingNumber,
+          bookedRoomIds: bookedRoomIds,
         },
       })
       .promise();
@@ -197,9 +198,6 @@ async function bookRooms(roomTypesToBook, availableRooms, newBooking) {
       try {
         const dates = getDatesInRange(newBooking.startDate, newBooking.endDate);
 
-        console.log('Booking dates:', dates);
-        console.log('New Booking:', newBooking);
-
         await db
           .update({
             TableName: 'room-db',
@@ -298,14 +296,10 @@ async function getAvailableRooms(startDate, endDate) {
 
     const allRooms = response.Items || [];
 
-    console.log('All rooms:', allRooms);
-
     // Filter out rooms with bookings for the specified date range
     const availableRooms = allRooms.filter(
       (room) => !hasBookingInDateRange(room.dates, startDate, endDate)
     );
-
-    console.log('Available rooms:', availableRooms);
 
     return availableRooms;
   } catch (error) {
