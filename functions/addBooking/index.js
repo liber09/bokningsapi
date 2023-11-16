@@ -30,6 +30,7 @@ exports.handler = async (event, context) => {
 
     //hämta hur många rum vi ska boka
     const roomTypesToBook = getRoomTypes(visitors);
+    console.log('roomstypestobook:', roomTypesToBook);
 
     //Boka rummen
     const bookedRooms = await bookRooms(
@@ -37,6 +38,10 @@ exports.handler = async (event, context) => {
       availableRooms,
       newBooking
     );
+
+    if (bookedRooms.length === 0) {
+      return sendResponse(400, { success: false, error: 'No available rooms' });
+    }
 
     const bookedRoomIds = bookedRooms.map((room) => room.roomId);
 
@@ -51,7 +56,6 @@ exports.handler = async (event, context) => {
       endDate
     );
 
-  // Spara bokningsdetaljer i DynamoDB
 
     await db
       .put({
@@ -102,6 +106,9 @@ exports.handler = async (event, context) => {
 
     return totalCost;
   }
+
+};
+
 
 async function bookRooms(roomTypesToBook, availableRooms, newBooking) {
   const roomsToBook = [];
