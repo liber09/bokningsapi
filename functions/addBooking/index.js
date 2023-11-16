@@ -15,9 +15,15 @@ exports.handler = async (event, context) => {
     newBooking;
   try {
     // Validera inmatningsparametrar
-    const error = validateParameters(firstName, eMail, startDate, endDate, visitors);
-    if(error.length > 0){
-      return sendResponse(400, { success: false, error});
+    const error = validateParameters(
+      firstName,
+      eMail,
+      startDate,
+      endDate,
+      visitors
+    );
+    if (error.length > 0) {
+      return sendResponse(400, { success: false, error });
     }
 
     //hämta tillgängliga rum i room-db
@@ -25,12 +31,23 @@ exports.handler = async (event, context) => {
 
     //hämta hur många rum vi ska boka
     const roomTypesToBook = getRoomTypes(visitors);
+    console.log('roomstypestobook:', roomTypesToBook);
 
     //Boka rummen
-    const bookedRooms = await bookRooms(roomTypesToBook, availableRooms);
+    const bookedRooms = await bookRooms(
+      roomTypesToBook,
+      availableRooms,
+      newBooking
+    );
+    console.log('booked rooms:', bookedRooms);
 
     // Beräkna totalbeloppet baserat på rumstyper och nätter
-    const totalAmount = calculateTotalAmount(roomType, startDate, endDate);
+    const totalAmount = calculateTotalAmount(
+      roomTypesToBook,
+      startDate,
+      endDate
+    );
+    console.log('total amount:', totalAmount);
 
     // Generera ett bokningsnummer (implementera din egen logik)
     //const bookingNumber = generateBookingNumber();
@@ -75,28 +92,38 @@ exports.handler = async (event, context) => {
     return sendResponse(500, { success: false });
   }
   */
-    return sendResponse(200, { success: true, newBooking});
+    return sendResponse(200, { success: true, newBooking });
   } catch (error) {
+    console.log('error from exports.handler', error);
     return sendResponse(500, { error: error });
-  }
-
-  function calculateTotalAmount(roomType, startDate, endDate) {
-    if(roomType === 'suit'){
-      const price = 1500;  
-    }else if (roomType === 'double'){
-      const price = 1000;
-    }else if (roomType === 'single'){
-      const price = 500;
-    }
-    const lengthOfStay = Math.floor((endDate - startDate) / (1000 * 60 * 60 * 24));
-    const totalCost = price*lengthOfStay
-    return totalCost;
   }
 
   function generateBookingNumber() {
     return Math.random()
       .toString(36)
       .substring(2, 6 + 2);
+  }
+
+  function calculateTotalAmount(roomTypes, startDate, endDate) {
+    let totalCost = 0;
+
+    roomTypes.forEach((roomType) => {
+      let price;
+      if (roomType === 'suite') {
+        price = 1500;
+      } else if (roomType === 'double') {
+        price = 1000;
+      } else if (roomType === 'single') {
+        price = 500;
+      }
+
+      const lengthOfStay = Math.floor(
+        (endDate - startDate) / (1000 * 60 * 60 * 24)
+      );
+      totalCost += price * lengthOfStay;
+    });
+
+    return totalCost;
   }
 
   function generateConfirmationEmail({
@@ -154,38 +181,50 @@ exports.handler = async (event, context) => {
   }
 };
 
-async function bookRooms(roomTypesToBook, availableRooms) {
+async function bookRooms(roomTypesToBook, availableRooms, newBooking) {
   const roomsToBook = [];
 
   for (let type of roomTypesToBook) {
     const roomIndex = availableRooms.findIndex((room) => room.type === type);
 
     if (roomIndex !== -1) {
-      roomsToBook.push(availableRooms[roomIndex]);
+      const bookedRoom = availableRooms[roomIndex];
+      roomsToBook.push(bookedRoom);
       availableRooms.splice(roomIndex, 1);
+
+      //room-databasen uppdateras med bokningen men själva rummen måste också läggas in på bokning-db
+
+      try {
+        const dates = getDatesInRange(newBooking.startDate, newBooking.endDate);
+
+        console.log('Booking dates:', dates);
+        console.log('New Booking:', newBooking);
+
+        await db
+          .update({
+            TableName: 'room-db',
+            Key: { roomId: bookedRoom.roomId },
+            UpdateExpression:
+              'SET #booked = list_append(if_not_exists(#booked, :empty_list), :newBooking), #dates = list_append(if_not_exists(#dates, :empty_dates), :dates)',
+            ExpressionAttributeNames: {
+              '#booked': 'booked',
+              '#dates': 'dates',
+            },
+            ExpressionAttributeValues: {
+              ':newBooking': [newBooking],
+              ':dates': dates,
+              ':empty_list': [],
+              ':empty_dates': [],
+            },
+          })
+          .promise();
+      } catch (error) {
+        console.error('Error updating room-db:', error);
+        return sendResponse(400, { error: error });
+      }
     }
   }
-
-  //room-databasen uppdateras med bokningen men själva rummen måste också läggas in på bokning-db
-
-  try {
-    await db
-      .update({
-        TableName: 'room-db',
-        Key: { id: room.id },
-        UpdateExpression:
-          'SET #booked = list_append(if_not_exists(#booked, :empty_list), :newBooking)',
-        ExpressionAttributeNames: { '#booked': 'booked' },
-        ExpressionAttributeValues: {
-          ':newBooking': [newBooking],
-          ':empty_list': [],
-        },
-      })
-      .promise();
-  } catch (error) {
-    return sendResponse(400, { error: error });
-  }
-
+  console.log('rooms to book', roomsToBook);
   return roomsToBook;
 }
 
@@ -194,63 +233,49 @@ function validateParameters(firstName, eMail, startDate, endDate, visitors) {
   let errorMessage = '';
   var validEmailRegex = /^[A-Za-z0-9_!#$%&'*+\/=?`{|}~^.-]+@[A-Za-z0-9.-]+$/gm;
   // const today = moment(new Date()).format('YYYY-MM-DD');
-  const today = moment(new Date(),'YYYY-MM-DD').unix();
-  if (firstName.trim() === ''){
+  const today = moment(new Date(), 'YYYY-MM-DD').unix();
+  if (firstName && firstName.trim() === '') {
     validationError = true;
     errorMessage += ' Firstname is missing, ';
-    //  error: errorMessage,
-    //  message: 'firstname is missing',
-    //});
   }
-  
-  if (!eMail.match(validEmailRegex)) {
+
+  if (eMail && !eMail.match(validEmailRegex)) {
     validationError = true;
     errorMessage += ' eMail is not valid, ';
-    //return sendResponse(400, {
-    //  error: errorMessage,
-    //  message: 'eMail is not valid.',
-    //});
   }
-  
-  
-  if (moment(new Date(),'YYYY-MM-DD').unix() >= moment(startDate, 'YYYY-MM-DD').unix()) {
+
+  if (
+    startDate &&
+    moment(new Date(), 'YYYY-MM-DD').unix() >=
+      moment(startDate, 'YYYY-MM-DD').unix()
+  ) {
     validationError = true;
     errorMessage += ' Start date needs to be today or later, ';
-    //return sendResponse(400, {
-    //  error: errorMessage,
-    //  message: 'Start date needs to be today or later.',
-    //});
   }
-  
+
   if (
+    startDate &&
+    endDate &&
     moment(endDate, 'YYYY-MM-DD').unix() <
-    moment(startDate, 'YYYY-MM-DD').add(1, 'days').unix()
+      moment(startDate, 'YYYY-MM-DD').add(1, 'days').unix()
   ) {
     validationError = true;
     errorMessage += ' End date needs to be at least one day after start date, ';
-    //return sendResponse(400, {
-    //  error: errorMessage,
-    //  message: 'End date needs to be at least one day after start date',
-    //});
   }
-  
-  if (visitors <= 0) {
+
+  if (visitors === undefined || visitors <= 0) {
     validationError = true;
     errorMessage += ' There needs to be at least one visitor, ';
-    //return sendResponse(400, {
-    //  error: errorMessage,
-    //  message: 'There needs to be at least one visitor',
-    //});
   }
-  
-  return errorMessage;
+  console.log('validate parameters:', errorMessage);
+  return sendResponse(400, { error: errorMessage });
 }
 
 function getRoomTypes(visitors) {
   rooms = [];
   let tempVisitors = visitors;
   while (tempVisitors > 2) {
-    rooms.push('suit');
+    rooms.push('suite');
     tempVisitors -= 3;
   }
   while (tempVisitors > 1) {
@@ -273,20 +298,28 @@ async function getAvailableRooms(startDate, endDate) {
 
     const allRooms = response.Items || [];
 
+    console.log('All rooms:', allRooms);
+
     // Filter out rooms with bookings for the specified date range
     const availableRooms = allRooms.filter(
       (room) => !hasBookingInDateRange(room.dates, startDate, endDate)
     );
 
+    console.log('Available rooms:', availableRooms);
+
     return availableRooms;
   } catch (error) {
+    console.error('Error in getAvailableRooms:', error);
     return sendResponse(400, { error: error });
   }
 }
 
 function hasBookingInDateRange(dates, startDate, endDate) {
-  const range = getDatesInRange(startDate, endDate);
-  return dates.some((date) => range.includes(date));
+  if (dates && dates.length > 0) {
+    const range = getDatesInRange(startDate, endDate);
+    return dates.some((date) => range.includes(date));
+  }
+  return false;
 }
 
 function getDatesInRange(startDate, endDate) {
