@@ -11,11 +11,14 @@ exports.handler = async (event, context) => {
 
   newBooking.id = uuid.v4();
   newBooking.bookingNumber = generateBookingNumber();
-  const { id, firstname, email, startDate, endDate, visitors, bookingNumber } =
+  const { id, firstName, eMail, startDate, endDate, visitors, bookingNumber } =
     newBooking;
   try {
-    // Validera inmatningsparametrar (lägg till valideringslogik här)
-    validateParameters(firstname, email, startDate, endDate, visitors);
+    // Validera inmatningsparametrar
+    const error = validateParameters(firstName, eMail, startDate, endDate, visitors);
+    if(error.length > 0){
+      return sendResponse(400, { success: false, error});
+    }
 
     //hämta tillgängliga rum i room-db
     const availableRooms = await getAvailableRooms(startDate, endDate);
@@ -27,7 +30,7 @@ exports.handler = async (event, context) => {
     const bookedRooms = await bookRooms(roomTypesToBook, availableRooms);
 
     // Beräkna totalbeloppet baserat på rumstyper och nätter
-    //const totalAmount = calculateTotalAmount(roomTypes, startDate, endDate);
+    const totalAmount = calculateTotalAmount(roomType, startDate, endDate);
 
     // Generera ett bokningsnummer (implementera din egen logik)
     //const bookingNumber = generateBookingNumber();
@@ -52,8 +55,8 @@ exports.handler = async (event, context) => {
         TableName: 'booking-db',
         Item: {
           id: id,
-          name: firstname,
-          email: email,
+          name: firstName,
+          email: eMail,
           startDate: startDate,
           endDate: endDate,
           visitors: visitors,
@@ -72,13 +75,22 @@ exports.handler = async (event, context) => {
     return sendResponse(500, { success: false });
   }
   */
-    return sendResponse(200, { success: true });
+    return sendResponse(200, { success: true, newBooking});
   } catch (error) {
     return sendResponse(500, { error: error });
   }
 
-  function calculateTotalAmount(roomTypes, startDate, endDate) {
-    // Implementera logik för att beräkna totalbeloppet baserat på rumstyper och nätter
+  function calculateTotalAmount(roomType, startDate, endDate) {
+    if(roomType === 'suit'){
+      const price = 1500;  
+    }else if (roomType === 'double'){
+      const price = 1000;
+    }else if (roomType === 'single'){
+      const price = 500;
+    }
+    const lengthOfStay = Math.floor((endDate - startDate) / (1000 * 60 * 60 * 24));
+    const totalCost = price*lengthOfStay
+    return totalCost;
   }
 
   function generateBookingNumber() {
@@ -177,48 +189,61 @@ async function bookRooms(roomTypesToBook, availableRooms) {
   return roomsToBook;
 }
 
-function validateParameters(firstname, email, startDate, endDate, visitors) {
-  var validEmailRegex =
-    /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*$/;
-  // const today = moment(new Date()).format('YYYY-MM-DD');
-  const today = moment().unix();
-
+function validateParameters(firstName, eMail, startDate, endDate, visitors) {
+  let validationError = false;
   let errorMessage = '';
-  if (!firstname) {
-    return sendResponse(500, {
-      error: errorMessage,
-      message: 'firstname is missing',
-    });
+  var validEmailRegex = /^[A-Za-z0-9_!#$%&'*+\/=?`{|}~^.-]+@[A-Za-z0-9.-]+$/gm;
+  // const today = moment(new Date()).format('YYYY-MM-DD');
+  const today = moment(new Date(),'YYYY-MM-DD').unix();
+  if (firstName.trim() === ''){
+    validationError = true;
+    errorMessage += ' Firstname is missing, ';
+    //  error: errorMessage,
+    //  message: 'firstname is missing',
+    //});
   }
-  if (!email.match(validEmailRegex)) {
-    return sendResponse(500, {
-      error: errorMessage,
-      message: 'eMail is not valid.',
-    });
+  
+  if (!eMail.match(validEmailRegex)) {
+    validationError = true;
+    errorMessage += ' eMail is not valid, ';
+    //return sendResponse(400, {
+    //  error: errorMessage,
+    //  message: 'eMail is not valid.',
+    //});
   }
-  if (moment(startDate, 'YYYY-MM-DD').unix() < today) {
-    //    if (!startDate >= today) {
-    return sendResponse(500, {
-      error: errorMessage,
-      message: 'Start date needs to be today or later.',
-    });
+  
+  
+  if (moment(new Date(),'YYYY-MM-DD').unix() >= moment(startDate, 'YYYY-MM-DD').unix()) {
+    validationError = true;
+    errorMessage += ' Start date needs to be today or later, ';
+    //return sendResponse(400, {
+    //  error: errorMessage,
+    //  message: 'Start date needs to be today or later.',
+    //});
   }
-  //if (!endDate >= moment(startDate).add(1, 'days')) {
+  
   if (
     moment(endDate, 'YYYY-MM-DD').unix() <
     moment(startDate, 'YYYY-MM-DD').add(1, 'days').unix()
   ) {
-    return sendResponse(500, {
-      error: errorMessage,
-      message: 'End date needs to be at least one day after start date',
-    });
+    validationError = true;
+    errorMessage += ' End date needs to be at least one day after start date, ';
+    //return sendResponse(400, {
+    //  error: errorMessage,
+    //  message: 'End date needs to be at least one day after start date',
+    //});
   }
+  
   if (visitors <= 0) {
-    return sendResponse(500, {
-      error: errorMessage,
-      message: 'There needs to be at least one visitor',
-    });
+    validationError = true;
+    errorMessage += ' There needs to be at least one visitor, ';
+    //return sendResponse(400, {
+    //  error: errorMessage,
+    //  message: 'There needs to be at least one visitor',
+    //});
   }
+  
+  return errorMessage;
 }
 
 function getRoomTypes(visitors) {
