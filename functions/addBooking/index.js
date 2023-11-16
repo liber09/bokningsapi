@@ -80,8 +80,17 @@ exports.handler = async (event, context) => {
     return sendResponse(500, { error: error });
   }
 
-  function calculateTotalAmount(roomTypes, startDate, endDate) {
-    // Implementera logik för att beräkna totalbeloppet baserat på rumstyper och nätter
+  function calculateTotalAmount(roomType, startDate, endDate) {
+    if(roomType === 'suit'){
+      const price = 1500;  
+    }else if (roomType === 'double'){
+      const price = 1000;
+    }else if (roomType === 'single'){
+      const price = 500;
+    }
+    const lengthOfStay = Math.floor((endDate - startDate) / (1000 * 60 * 60 * 24));
+    const totalCost = price*lengthOfStay
+    return totalCost;
   }
 
   function generateBookingNumber() {
