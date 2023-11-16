@@ -1,5 +1,4 @@
 const { sendResponse } = require('../../responses/index.js');
-const nanoid = require('nanoid');
 const uuid = require('uuid');
 const moment = require('moment');
 const AWS = require('aws-sdk');
@@ -32,6 +31,7 @@ exports.handler = async (event, context) => {
 
     //hämta hur många rum vi ska boka
     const roomTypesToBook = getRoomTypes(visitors);
+    console.log('roomstypestobook:', roomTypesToBook);
 
     //Boka rummen
     const bookedRooms = await bookRooms(
@@ -39,6 +39,10 @@ exports.handler = async (event, context) => {
       availableRooms,
       newBooking
     );
+
+    if (bookedRooms.length === 0) {
+      return sendResponse(400, { success: false, error: 'No available rooms' });
+    }
 
     const bookedRoomIds = bookedRooms.map((room) => room.roomId);
 
@@ -48,24 +52,6 @@ exports.handler = async (event, context) => {
       startDate,
       endDate
     );
-
-    // Generera ett bokningsnummer (implementera din egen logik)
-    //const bookingNumber = generateBookingNumber();
-
-    // Skicka bekräftelsemail
-    /*
-    const confirmationEmail = generateConfirmationEmail({
-      bookingNumber,
-      numberOfGuests: visitors.length,
-      roomTypes,
-      totalAmount,
-      checkInDate: startDate,
-      checkOutDate: endDate,
-      guestName: firstname,
-    });
-    */
-
-    // Spara bokningsdetaljer i DynamoDB
 
     await db
       .put({
@@ -83,16 +69,6 @@ exports.handler = async (event, context) => {
       })
       .promise();
 
-    // Skicka bekräftelsemail
-    /*
-    await sendEmail(email, 'Bokningsbekräftelse', confirmationEmail);
-
-    return sendResponse(200, { success: true, bookingNumber, totalAmount });
-  } catch (error) {
-    console.error('Fel:', error);
-    return sendResponse(500, { success: false });
-  }
-  */
     return sendResponse(200, { success: true, newBooking });
   } catch (error) {
     console.log('error from exports.handler', error);
@@ -125,60 +101,6 @@ exports.handler = async (event, context) => {
     });
 
     return totalCost;
-  }
-
-  function generateConfirmationEmail({
-    bookingNumber,
-    numberOfGuests,
-    roomTypes,
-    totalAmount,
-    checkInDate,
-    checkOutDate,
-    guestName,
-  }) {
-    // Implementera logik för att generera innehållet i ett bekräftelsemail
-
-    // Exempel på innehåll i bekräftelsemailet (anpassa efter behov)
-    const emailContent = `
-        Thank you, ${guestName}, for your booking!
-
-        Bokningsnummer: ${bookingNumber}
-        Antal gäster: ${numberOfGuests}
-        Rumstyper: ${roomTypes.join(', ')}
-        Totalbelopp: ${totalAmount} SEK
-        Incheckningsdatum: ${checkInDate}
-        Utcheckningsdatum: ${checkOutDate}
-
-        We are looking forward to your visit!
-    `;
-
-    return emailContent;
-  }
-
-  async function sendEmail(toEmail, subject, body) {
-    const params = {
-      Destination: {
-        ToAddresses: [toEmail],
-      },
-      Message: {
-        Body: {
-          Text: {
-            Data: body,
-          },
-        },
-        Subject: {
-          Data: subject,
-        },
-      },
-      Source: 'din-email@example.com', // Uppdatera med din verifierade e-postadress i SES
-    };
-
-    try {
-      await ses.sendEmail(params).promise();
-    } catch (error) {
-      console.error('Fel vid sändning av e-post:', error);
-      throw error;
-    }
   }
 };
 
