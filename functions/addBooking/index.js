@@ -3,7 +3,6 @@ const uuid = require('uuid');
 const moment = require('moment');
 const AWS = require('aws-sdk');
 const db = new AWS.DynamoDB.DocumentClient();
-const ses = new AWS.SES();
 
 exports.handler = async (event, context) => {
   const newBooking = JSON.parse(event.body);
@@ -46,12 +45,17 @@ exports.handler = async (event, context) => {
 
     const bookedRoomIds = bookedRooms.map((room) => room.roomId);
 
+    if (bookedRooms.length === 0) {
+        return sendResponse(400, { success: false, error: 'No available rooms' });
+      }
+
     // Beräkna totalbeloppet baserat på rumstyper och nätter
     const totalAmount = calculateTotalAmount(
       roomTypesToBook,
       startDate,
       endDate
     );
+
 
     await db
       .put({
@@ -102,7 +106,9 @@ exports.handler = async (event, context) => {
 
     return totalCost;
   }
+
 };
+
 
 async function bookRooms(roomTypesToBook, availableRooms, newBooking) {
   const roomsToBook = [];
@@ -152,7 +158,8 @@ function validateParameters(firstName, eMail, startDate, endDate, visitors) {
   let validationError = false;
   let errorMessage = '';
   var validEmailRegex = /^[A-Za-z0-9_!#$%&'*+\/=?`{|}~^.-]+@[A-Za-z0-9.-]+$/gm;
-  // const today = moment(new Date()).format('YYYY-MM-DD');
+
+
   const today = moment(new Date(), 'YYYY-MM-DD').unix();
   if (firstName && firstName.trim() === '') {
     validationError = true;
@@ -250,3 +257,6 @@ function getDatesInRange(startDate, endDate) {
 
   return dates;
 }
+};
+
+
