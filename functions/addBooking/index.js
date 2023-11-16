@@ -21,16 +21,16 @@ exports.handler = async (event, context) => {
     }
 
     //hämta tillgängliga rum i room-db
-    //const availableRooms = await getAvailableRooms(startDate, endDate);
+    const availableRooms = await getAvailableRooms(startDate, endDate);
 
     //hämta hur många rum vi ska boka
-    //const roomTypesToBook = getRoomTypes(visitors);
+    const roomTypesToBook = getRoomTypes(visitors);
 
     //Boka rummen
-    //const bookedRooms = await bookRooms(roomTypesToBook, availableRooms);
+    const bookedRooms = await bookRooms(roomTypesToBook, availableRooms);
 
     // Beräkna totalbeloppet baserat på rumstyper och nätter
-    //const totalAmount = calculateTotalAmount(roomTypes, startDate, endDate);
+    const totalAmount = calculateTotalAmount(roomType, startDate, endDate);
 
     // Generera ett bokningsnummer (implementera din egen logik)
     //const bookingNumber = generateBookingNumber();
