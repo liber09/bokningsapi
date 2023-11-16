@@ -45,9 +45,6 @@ exports.handler = async (event, context) => {
 
     const bookedRoomIds = bookedRooms.map((room) => room.roomId);
 
-    if (bookedRooms.length === 0) {
-        return sendResponse(400, { success: false, error: 'No available rooms' });
-      }
 
     // Beräkna totalbeloppet baserat på rumstyper och nätter
     const totalAmount = calculateTotalAmount(
