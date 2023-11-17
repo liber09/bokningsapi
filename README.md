@@ -1,18 +1,23 @@
 /get
 - hämta alla bokningar
+- (GET)
 
 /delete
 - ta bort bokning
+- (DELETE)
 
 /change
 - ändra bokning
+- (PATCH)
 
 /add
 - lägg till bokning
+- (POST)
 
 
 /addRooms
 - lägg till rummen nedan en (1!) gång i Insomnia
+- (POST)
 
 {
   "roomData": [
