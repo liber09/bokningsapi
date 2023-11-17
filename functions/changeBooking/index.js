@@ -158,15 +158,6 @@ async function changeVisitorAmount(bookingId, visitors) {
   }
 }
 
-async function changeRoomType(bookingId, roomTypes) {
-  //om gästen vill ändra från ex två suites med tre personer i varje till 6 st singelrum
-  // isf ta bort datumen från de gamla rummen
-  return sendResponse(200, {
-    success: true,
-    message: 'Booking room types updated successfully',
-    updatedBooking: result.Attributes,
-  });
-}
 
 exports.handler = async (event, context) => {
   const { bookingId } = event.pathParameters;
