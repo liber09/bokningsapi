@@ -27,7 +27,6 @@ async function getRooms() {
       })
       .promise();
 
-    console.log('room-db', JSON.stringify(response.Items, null, 2));
     return response.Items || [];
   } catch (error) {
     console.error('Error fetching booking: ', error);
@@ -59,15 +58,19 @@ async function changeDate(bookingId, startDate, endDate, roomIdKey) {
 
     const rooms = await getRooms();
 
-    const isAvailable = areDatesAvailable(rooms, startDate, endDate, bookingId);
+    const isAvailable = areRoomsAvailable(
+      rooms,
+      startDate,
+      endDate,
+      booking.visitors,
+      bookingId
+    );
 
     if (!isAvailable) {
       return sendResponse(400, { message: 'Dates are not available' });
     }
 
     const newDates = getDatesInRange(startDate, endDate);
-
-    //  await updateItem('booking-db', { id: bookingId }, updateAttributes);
 
     if (roomIdKey) {
       const room = rooms.find((room) => room.roomId === roomIdKey);
@@ -94,38 +97,65 @@ async function changeDate(bookingId, startDate, endDate, roomIdKey) {
   }
 }
 
-function areDatesAvailable(rooms, startDate, endDate, bookingId) {
+function areRoomsAvailable(rooms, startDate, endDate, visitors, bookingId) {
   for (const room of rooms) {
     if (room.dates && room.dates.length > 0) {
-      const bookedRoom = room.dates.find((booking) => booking.id === bookingId);
+      const overlappingBooking = room.dates.find((booking) => {
+        const bookingStartDate = new Date(booking.startDate);
+        const bookingEndDate = new Date(booking.endDate);
 
-      if (bookedRoom) {
-        room.dates = room.dates.filter((date) => date.id !== bookingId);
+        const newStartDate = new Date(startDate);
+        const newEndDate = new Date(endDate);
 
-        const newDates = getDatesInRange(startDate, endDate);
+        return (
+          (newStartDate >= bookingStartDate &&
+            newStartDate <= bookingEndDate) ||
+          (newEndDate >= bookingStartDate && newEndDate <= bookingEndDate)
+        );
+      });
 
-        const isAvailable = !newDates.some((date) => room.dates.includes(date));
-
-        if (!isAvailable) {
-          room.dates.push(bookedRoom);
-        }
-
-        return isAvailable;
+      if (!overlappingBooking && room.capacity >= parseInt(visitors)) {
+        return true;
       }
     }
   }
 
-  return true;
+  return false;
 }
 
 async function changeVisitorAmount(bookingId, visitors) {
-  //Här behöver det vara en kod som är liknande i addBooking för att få ihop en hel bokning
-  //ta bort datumen från de gamla rummen
-  return sendResponse(200, {
-    success: true,
-    message: 'Booking visitors updated successfully',
-    updatedBooking: result.Attributes,
-  });
+  try {
+    const booking = await getBooking(bookingId);
+
+    if (!booking) {
+      return sendResponse(404, { message: 'Booking not found' });
+    }
+
+    const rooms = await getRooms();
+
+    const isAvailable = areRoomsAvailable(
+      rooms,
+      booking.startDate,
+      booking.endDate,
+      visitors,
+      bookingId
+    );
+
+    if (!isAvailable) {
+      return sendResponse(400, {
+        message: 'No available rooms for the new number of visitors and dates',
+      });
+    }
+
+    booking.visitors = visitors;
+
+    await updateItem('booking-db', { id: bookingId }, { visitors: visitors });
+
+    return true;
+  } catch (error) {
+    console.error(`Could not update visitors for booking ${bookingId}`, error);
+    return false;
+  }
 }
 
 async function changeRoomType(bookingId, roomTypes) {
@@ -154,7 +184,7 @@ exports.handler = async (event, context) => {
       roomIdKey
     );
 
-    if (!changeDateResult.success) {
+    if (!changeDateResult) {
       return sendResponse(400, {
         success: false,
         message:
@@ -162,10 +192,21 @@ exports.handler = async (event, context) => {
       });
     }
   }
-  /*
-  if (roomIdKey) {
-    await updateItem('room-db', { roomId: roomIdKey }, updateAttributes);
-  }*/
+
+  if ('visitors' in updateAttributes) {
+    const changeVisitorsResult = await changeVisitorAmount(
+      bookingId,
+      updateAttributes.visitors
+    );
+
+    if (!changeVisitorsResult) {
+      return sendResponse(400, {
+        success: false,
+        message:
+          'Could not change visitors, please make a new reservation instead',
+      });
+    }
+  }
 
   await updateItem('booking-db', { id: bookingId }, updateAttributes);
 
