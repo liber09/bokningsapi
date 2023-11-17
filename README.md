@@ -1,23 +1,28 @@
 /get
 - hämta alla bokningar
 - (GET)
+- GET - https://b1ztk6c127.execute-api.eu-north-1.amazonaws.com/get
 
 /delete/{bookingId}
 - ta bort bokning
 - (DELETE)
+- DELETE - https://b1ztk6c127.execute-api.eu-north-1.amazonaws.com/delete
 
 /change/{bookingId}
 - ändra bokning
 - (PATCH)
+- PATCH - https://b1ztk6c127.execute-api.eu-north-1.amazonaws.com/change/{bookingId}
 
 /add
 - lägg till bokning
 - (POST)
+- POST - https://b1ztk6c127.execute-api.eu-north-1.amazonaws.com/add
 
 
 /addRooms
-- lägg till rummen nedan en (1!) gång i Insomnia
+- lägg till rummen nedan i body en (1!) gång i Insomnia
 - (POST)
+- POST - https://b1ztk6c127.execute-api.eu-north-1.amazonaws.com/addRooms
 
 {
   "roomData": [
