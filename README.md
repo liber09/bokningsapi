@@ -2,11 +2,11 @@
 - hämta alla bokningar
 - (GET)
 
-/delete
+/delete/{bookingId}
 - ta bort bokning
 - (DELETE)
 
-/change
+/change/{bookingId}
 - ändra bokning
 - (PATCH)
 
