@@ -14,11 +14,15 @@ exports.handler = async (event, context) => {
     try {
         const rooms = await db.scan(params).promise();
         const bookings = await db.scan(params2).promise();
-
+        
         bookings.Items.forEach(booking => {
-          let numberOfRooms = rooms.Items
-            .filter(item => item.dates && item.dates.length > 0 && 
-              String(item.booked.bookingNumber) == String(booking.bookingNumber)).length;
+          const roomsWithBookings = rooms.Items.filter(
+            item => item.dates && item.dates.length > 0
+          )
+          const numberOfRooms = roomsWithBookings.filter(room => 
+                room.booked.some(roomBooking => roomBooking.bookingNumber === booking.bookingNumber)
+          ).length
+
             let bookingInformation = {
               "BookingNumber": booking.bookingNumber,
               "Reservation name": booking.name,
