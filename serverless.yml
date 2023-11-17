@@ -33,7 +33,7 @@ functions:
     handler: functions/deleteBooking/index.handler
     events:
       - httpApi:
-          path: '/delete'
+          path: '/delete/{bookingId}'
           method: DELETE
   getBookings:
     handler: functions/getBookings/index.handler
