@@ -18,6 +18,15 @@
 - (POST)
 - POST - https://b1ztk6c127.execute-api.eu-north-1.amazonaws.com/add
 
+- Exempeldata
+  {
+    "firstName": "Kajsa",
+    "eMail": "Kajsa@kajsa.se",
+    "startDate": "2023-12-20",
+    "endDate": "2023-12-23",
+    "visitors": "1"
+}
+
 
 /addRooms
 - lägg till rummen nedan i body en (1!) gång i Insomnia
